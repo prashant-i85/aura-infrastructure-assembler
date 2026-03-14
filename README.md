@@ -87,6 +87,9 @@ The server starts at **http://localhost:8080**
 
 ## Web Dashboard
 
+
+![AURA Dashboard Screenshot](images/dashboard.png)
+
 Open your browser at **http://localhost:8080** for the built-in React dashboard.
 
 Features:
