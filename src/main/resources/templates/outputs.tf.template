@@ -1,0 +1,14 @@
+output "instance_id" {
+  description = "The ID of the provisioned EC2 instance"
+  value       = aws_instance.aura_instance.id
+}
+
+output "public_ip" {
+  description = "The public IPv4 address of the EC2 instance"
+  value       = aws_instance.aura_instance.public_ip
+}
+
+output "availability_zone" {
+  description = "The availability zone where the instance was launched"
+  value       = aws_instance.aura_instance.availability_zone
+}

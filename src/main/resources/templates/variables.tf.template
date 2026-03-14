@@ -1,0 +1,25 @@
+variable "aws_region" {
+  description = "AWS region for resource provisioning"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "EC2 instance type (e.g., t2.micro, t3.small)"
+  type        = string
+}
+
+variable "ami_id" {
+  description = "Amazon Machine Image ID"
+  type        = string
+}
+
+variable "instance_name" {
+  description = "Name tag for the EC2 instance"
+  type        = string
+}
+
+variable "key_pair_name" {
+  description = "Name of the AWS Key Pair for SSH access (optional)"
+  type        = string
+  default     = ""
+}

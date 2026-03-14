@@ -1,0 +1,5 @@
+aws_region    = "${region}"
+instance_type = "${instanceType}"
+ami_id        = "${amiId}"
+instance_name = "${instanceName}"
+key_pair_name = ${keyPairName}
