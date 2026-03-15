@@ -166,6 +166,24 @@ class InfrastructureControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"));
     }
 
+    // ─── DELETE /destroy/{requestId} ──────────────────────────────────────────────
+
+    @Test
+    void destroy_ExistingId_Returns202() throws Exception {
+        InfrastructureResponse mockResponse = InfrastructureResponse.builder()
+                .requestId("existing-id")
+                .status(ProvisioningStatus.DESTROYING)
+                .message("Infrastructure destruction initiated")
+                .build();
+
+        when(orchestrator.initiateDestruction("existing-id")).thenReturn(mockResponse);
+
+        mockMvc.perform(delete("/api/infrastructure/destroy/existing-id"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("DESTROYING"))
+                .andExpect(jsonPath("$.requestId").value("existing-id"));
+    }
+
     // ─── GET /history ─────────────────────────────────────────────────────────────
 
     @Test
