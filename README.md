@@ -216,10 +216,13 @@ aura-infrastructure-assembler/
 ---
 
 ## 🚀 Roadmap / Future Enhancements
+- [ ] **AI Infrastructure:** Add support for provisioning AI Developer Workspaces (Amazon SageMaker / GCP Vertex AI).
+- [ ] **Smart Pricing Engine:** Build a cost-comparison tool to help users choose between AWS and GCP for the cheapest resource.
 - [ ] Add Multi-Cloud support (Azure, GCP)
 - [ ] Support provisioning full VPC stacks (Subnets, Security Groups, ALB)
 - [ ] Remote Terraform state backend support (S3 + DynamoDB)
 - [ ] Natural Language to IaC processing (AI integration)
+
 
 ---
 
