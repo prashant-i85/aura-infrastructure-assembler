@@ -13,13 +13,13 @@
 
 ## What is AURA?
 
-AURA takes a JSON API call and turns it into a **real, running AWS EC2 instance** — automatically generating Terraform configuration files, executing `terraform init → plan → apply`, and returning the instance ID and public IP. No manual Terraform authoring. No AWS console navigation.
+AURA takes a JSON API call and turns it into **real, running infrastructure on AWS or GCP**. Built around a dynamic Strategy Pattern, it automatically generates Terraform configurations on-the-fly, executes `terraform init → plan → apply`, and returns your resource details. It supports provisioning Compute (EC2/GCE), Storage (S3/GCS), and AI Workspaces (SageMaker/Vertex AI). No manual Terraform authoring required.
 
 ```
 POST /api/infrastructure/provision
-{"instanceType": "t2.micro", "region": "us-east-1", "amiId": "ami-0c02fb55956c7d316", "instanceName": "my-server"}
+{"provider": "AWS", "resourceType": "COMPUTE", "instanceType": "t2.micro", "region": "us-east-1", "amiId": "ami-0c02fb55956c7d316", "instanceName": "my-server"}
 
-──► HTTP 202 + requestId ──► (background) terraform init/plan/apply ──► EC2 running in AWS ✓
+──► HTTP 202 + requestId ──► (background) terraform init/plan/apply ──► Resource running in AWS/GCP ✓
 ```
 
 ---
@@ -36,14 +36,15 @@ POST /api/infrastructure/provision
 
 ---
 
-## AWS Credentials Setup
+## Credentials Setup
 
-AURA reads credentials from standard AWS sources — **never hardcode credentials**.
+AURA reads credentials from standard cloud provider sources — **never hardcode credentials**.
 
+### AWS Credentials
 **Option A — AWS CLI (recommended):**
 ```bash
 aws configure
-# Enter: Access Key ID, Secret Access Key, default region, output format
+# Enter: Access Key ID, Secret Access Key, default region
 ```
 
 **Option B — Environment Variables:**
@@ -52,14 +53,16 @@ export AWS_ACCESS_KEY_ID=your_key_id
 export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_DEFAULT_REGION=us-east-1
 ```
+*Note: Ensure your IAM user has the necessary permissions (e.g., `ec2:*`, `s3:*`, `sagemaker:*`).*
 
-The IAM user or role must have at minimum:
-```json
-{
-  "Effect": "Allow",
-  "Action": ["ec2:*"],
-  "Resource": "*"
-}
+### GCP Credentials
+Install the Google Cloud CLI and authenticate:
+```bash
+gcloud auth application-default login
+```
+Or export the service account key via environment variable:
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"
 ```
 
 ---
@@ -103,17 +106,24 @@ Features:
 
 ## REST API
 
-### Provision an EC2 Instance
+### Get Pricing Comparison (Smart Pricing Engine)
+Compare costs across AWS and GCP for your requirements:
+```bash
+curl -X GET "http://localhost:8080/api/pricing/compare?resourceType=COMPUTE&requirements=2cpu_4gb"
+```
+
+### Provision a Resource
 
 ```bash
 curl -X POST http://localhost:8080/api/infrastructure/provision \
   -H "Content-Type: application/json" \
   -d '{
+    "provider": "AWS",
+    "resourceType": "COMPUTE",
     "instanceType": "t2.micro",
     "region": "us-east-1",
     "amiId": "ami-0c02fb55956c7d316",
-    "instanceName": "my-aura-server",
-    "keyPairName": "my-keypair"
+    "instanceName": "my-aura-server"
   }'
 ```
 
@@ -133,20 +143,6 @@ curl -X POST http://localhost:8080/api/infrastructure/provision \
 curl http://localhost:8080/api/infrastructure/status/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
-**Response when complete (200 OK):**
-```json
-{
-  "requestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "SUCCESS",
-  "instanceId": "i-0abcdef1234567890",
-  "publicIp": "54.123.45.67",
-  "availabilityZone": "us-east-1a",
-  "region": "us-east-1",
-  "instanceType": "t2.micro",
-  "instanceName": "my-aura-server"
-}
-```
-
 ### Destroy Infrastructure
 
 ```bash
@@ -159,11 +155,11 @@ curl -X DELETE http://localhost:8080/api/infrastructure/destroy/a1b2c3d4-e5f6-78
 
 ```text
 1. POST /provision            → validate → save as PENDING → return 202
-2. Background thread          → generate 5 .tf files in terraform-workspaces/{id}/
-3. terraform init             → download hashicorp/aws provider (~150MB, cached)
+2. Background thread          → Use Strategy Pattern to generate .tf files in terraform-workspaces/{id}/
+3. terraform init             → download cloud providers (AWS/GCP)
 4. terraform plan             → preview changes (logged)
-5. terraform apply            → RunInstances API call → EC2 running
-6. terraform output -json     → extract instanceId, publicIp
+5. terraform apply            → execute deployment to AWS or GCP
+6. terraform output -json     → extract metadata (instanceId, publicIp, etc.)
 7. Status updated to SUCCESS  → client polls GET /status/{id}
 ```
 
@@ -173,11 +169,11 @@ curl -X DELETE http://localhost:8080/api/infrastructure/destroy/a1b2c3d4-e5f6-78
 
 | Field | Rule |
 |-------|------|
-| `instanceType` | Must match `t2.nano`, `t2.micro`, `t2.small`, `t2.medium`, `t2.large`, or `t3.*` |
-| `region` | Must match AWS region format: `us-east-1`, `ap-south-1`, etc. |
-| `amiId` | Must match `ami-[8-17 hex chars]` |
+| `provider` | `AWS` or `GCP` |
+| `resourceType` | `COMPUTE`, `STORAGE`, or `AI_WORKSPACE` |
+| `instanceType` | Valid types like `t2.micro` or `e2-micro` (for COMPUTE) |
+| `region` | E.g. `us-east-1`, `us-central1` |
 | `instanceName` | 3–64 characters |
-| `keyPairName` | Optional |
 
 *Invalid inputs return HTTP **400** with field-level error details.*
 
@@ -189,15 +185,14 @@ curl -X DELETE http://localhost:8080/api/infrastructure/destroy/a1b2c3d4-e5f6-78
 aura-infrastructure-assembler/
 ├── pom.xml
 ├── src/main/java/com/aura/infrastructure/
-│   ├── config/         # TerraformConfig, AsyncConfig
-│   ├── controller/     # InfrastructureController, HealthController
-│   ├── service/        # Generator, Executor, Orchestrator
+│   ├── controller/     # InfrastructureController, PricingController
+│   ├── service/        # Orchestrator, Executor, PricingEngine
+│   │   └── strategy/   # Strategy Pattern implementations (AwsComputeGenerator, etc.)
 │   ├── model/          # Request, Response, Status, TerraformOutput
 │   ├── repository/     # In-memory RequestRepository
-│   └── exception/      # Custom exceptions + GlobalExceptionHandler
+│   └── exception/      # Custom exceptions
 ├── src/main/resources/
 │   ├── application.yml
-│   ├── templates/      # 5 .tf.template files
 │   └── static/         # index.html (React dashboard)
 └── terraform-workspaces/  # Created at runtime per request
 ```
@@ -216,11 +211,11 @@ aura-infrastructure-assembler/
 ---
 
 ## 🚀 Roadmap / Future Enhancements
-- [ ] **AI Infrastructure:** Add support for provisioning AI Developer Workspaces (Amazon SageMaker / GCP Vertex AI).
-- [ ] **Smart Pricing Engine:** Build a cost-comparison tool to help users choose between AWS and GCP for the cheapest resource.
-- [ ] Add Multi-Cloud support (Azure, GCP)
+- [x] **Multi-Cloud Support:** AWS and GCP architectures.
+- [x] **New Resource Types:** Compute, Storage, and AI Workspaces.
+- [x] **Smart Pricing Engine:** Cost-comparison tool across AWS and GCP.
 - [ ] Support provisioning full VPC stacks (Subnets, Security Groups, ALB)
-- [ ] Remote Terraform state backend support (S3 + DynamoDB)
+- [ ] Remote Terraform state backend support (S3 + DynamoDB/GCS)
 - [ ] Natural Language to IaC processing (AI integration)
 
 

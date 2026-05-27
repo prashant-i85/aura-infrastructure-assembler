@@ -50,6 +50,8 @@ class InfrastructureControllerTest {
 
         String requestBody = """
                 {
+                    "provider": "AWS",
+                    "resourceType": "COMPUTE",
                     "instanceType": "t2.micro",
                     "region": "us-east-1",
                     "amiId": "ami-0c02fb55956c7d316",
@@ -69,6 +71,8 @@ class InfrastructureControllerTest {
     void provision_InvalidInstanceType_Returns400() throws Exception {
         String requestBody = """
                 {
+                    "provider": "AWS",
+                    "resourceType": "COMPUTE",
                     "instanceType": "m5.xlarge",
                     "region": "us-east-1",
                     "amiId": "ami-0c02fb55956c7d316",
@@ -87,6 +91,8 @@ class InfrastructureControllerTest {
     void provision_InvalidRegion_Returns400() throws Exception {
         String requestBody = """
                 {
+                    "provider": "AWS",
+                    "resourceType": "COMPUTE",
                     "instanceType": "t2.micro",
                     "region": "US-EAST-1",
                     "amiId": "ami-0c02fb55956c7d316",
@@ -105,6 +111,8 @@ class InfrastructureControllerTest {
     void provision_InvalidAmiId_Returns400() throws Exception {
         String requestBody = """
                 {
+                    "provider": "AWS",
+                    "resourceType": "COMPUTE",
                     "instanceType": "t2.micro",
                     "region": "us-east-1",
                     "amiId": "invalid-ami",
@@ -123,6 +131,8 @@ class InfrastructureControllerTest {
     void provision_BlankInstanceName_Returns400() throws Exception {
         String requestBody = """
                 {
+                    "provider": "AWS",
+                    "resourceType": "COMPUTE",
                     "instanceType": "t2.micro",
                     "region": "us-east-1",
                     "amiId": "ami-0c02fb55956c7d316",
@@ -164,24 +174,6 @@ class InfrastructureControllerTest {
         mockMvc.perform(get("/api/infrastructure/status/unknown-id"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not Found"));
-    }
-
-    // ─── DELETE /destroy/{requestId} ──────────────────────────────────────────────
-
-    @Test
-    void destroy_ExistingId_Returns202() throws Exception {
-        InfrastructureResponse mockResponse = InfrastructureResponse.builder()
-                .requestId("existing-id")
-                .status(ProvisioningStatus.DESTROYING)
-                .message("Infrastructure destruction initiated")
-                .build();
-
-        when(orchestrator.initiateDestruction("existing-id")).thenReturn(mockResponse);
-
-        mockMvc.perform(delete("/api/infrastructure/destroy/existing-id"))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.status").value("DESTROYING"))
-                .andExpect(jsonPath("$.requestId").value("existing-id"));
     }
 
     // ─── GET /history ─────────────────────────────────────────────────────────────

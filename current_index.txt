@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AURA — Autonomous Universal Resource Assembler</title>
+  <meta name="description" content="AURA — Self-assembling cloud infrastructure powered by Terraform and AWS" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+
+  <!-- React + Babel via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-base: #a0a6ae; /* Gray desktop background */
+      --bg-surface: linear-gradient(135deg, #fdfcf9 0%, #f4e8c1 100%); /* Warm cream app background */
+      --bg-card: #ffffff;
+      --bg-card-hover: #fcfcfc;
+      --border: rgba(0, 0, 0, 0.04);
+      --border-glow: rgba(0, 0, 0, 0.08);
+      --accent: #f4d03f; /* Soft yellow */
+      --accent-2: #282828; /* Dark sleek element */
+      --accent-green: #34d399;
+      --accent-red: #f87171;
+      --accent-yellow: #f4d03f;
+      --text-primary: #1c1c1c;
+      --text-secondary: #717171;
+      --text-muted: #a1a1a1;
+      --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
+      --topbar-bg: transparent;
+      --transition-theme: all 0.3s ease;
+    }
+
+    /* ── Light Theme ── */
+    [data-theme="light"] {
+      /* Matching Default Root */
+      --bg-base: #a0a6ae;
+      --bg-surface: linear-gradient(135deg, #fdfcf9 0%, #f4e8c1 100%);
+      --bg-card: #ffffff;
+      --bg-card-hover: #fcfcfc;
+      --text-primary: #1c1c1c;
+      --text-secondary: #717171;
+      --topbar-bg: transparent;
+    }
+    
+    [data-theme="dark"] {
+      /* Keep dark mode but softened */
+      --bg-base: #111111;
+      --bg-surface: #1e1e1e;
+      --bg-card: #282828;
+      --bg-card-hover: #333333;
+      --border: rgba(255,255,255,0.05);
+      --text-primary: #fcfcfc;
+      --text-secondary: #a1a1a1;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: var(--transition-theme);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    /* ── Layout ── */
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1400px;
+      min-height: 90vh;
+      background: var(--bg-surface);
+      border-radius: 32px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 3rem;
+      background: transparent;
+      border-bottom: none;
+      position: relative;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ── Theme Toggle ── */
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--border-glow);
+      color: var(--accent);
+      transform: rotate(15deg);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #10b981, #047857);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -1px;
+      color: white;
+    }
+
+    .logo-text {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.03em;
+    }
+
+    .logo-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 1px;
+    }
+
+    .health-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border: 1px solid;
+      cursor: default;
+      transition: all 0.3s ease;
+    }
+
+    .health-badge.up {
+      border-color: rgba(52, 211, 153, 0.3);
+      color: var(--accent-green);
+      background: rgba(52, 211, 153, 0.06);
+    }
+
+    .health-badge.down {
+      border-color: rgba(248, 113, 113, 0.3);
+      color: var(--accent-red);
+      background: rgba(248, 113, 113, 0.06);
+    }
+
+    .health-badge.check {
+      border-color: var(--border);
+      color: var(--text-muted);
+      background: transparent;
+    }
+
+    .health-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .health-badge.up .health-dot {
+      background: var(--accent-green);
+    }
+
+    .health-badge.down .health-dot {
+      background: var(--accent-red);
+      animation: none;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.85);
+      }
+    }
+
+    .main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 2rem;
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      color: var(--text-secondary);
+      background: transparent;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    /* ── Grid ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .col-span-2 {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 900px) {
+      .col-span-2 {
+        grid-column: span 1;
+      }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-glow);
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .icon {
+      font-size: 1rem;
+    }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .form-control {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+    }
+
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 10.5l-4-4h8z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+
+    .form-control.error {
+      border-color: var(--accent-red);
+    }
+
+    .error-text {
+      font-size: 0.75rem;
+      color: var(--accent-red);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 10px 22px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #0ea5e9);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(248, 113, 113, 0.25);
+    }
+
+    .btn-ghost {
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--text-primary);
+      border-color: var(--border-glow);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 0.8rem;
+    }
+
+    /* ── Status Badges ── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-pending {
+      background: rgba(251, 191, 36, 0.1);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+
+    .badge-in_progress {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .badge-success {
+      background: rgba(52, 211, 153, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+
+    .badge-failed {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+
+    .badge-destroying {
+      background: rgba(251, 191, 36, 0.1);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+
+    .badge-destroyed {
+      background: rgba(71, 85, 105, 0.2);
+      color: var(--text-muted);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── Code / Mono ── */
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .text-accent {
+      color: var(--accent);
+    }
+
+    .text-green {
+      color: var(--accent-green);
+    }
+
+    .text-red {
+      color: var(--accent-red);
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+    }
+
+    .text-sm {
+      font-size: 0.8rem;
+    }
+
+    .fw-600 {
+      font-weight: 600;
+    }
+
+    /* ── Alert Banner ── */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      border: 1px solid;
+      margin-bottom: 1rem;
+    }
+
+    .alert-success {
+      background: rgba(52, 211, 153, 0.08);
+      border-color: rgba(52, 211, 153, 0.25);
+      color: var(--accent-green);
+    }
+
+    .alert-error {
+      background: rgba(248, 113, 113, 0.08);
+      border-color: rgba(248, 113, 113, 0.25);
+      color: var(--accent-red);
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.25);
+      color: var(--accent);
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.73rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(99, 179, 237, 0.06);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    /* ── Status Panel ── */
+    .status-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .status-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .status-meta-item label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .status-meta-item .val {
+      font-family: var(--font-mono);
+      font-size: 0.83rem;
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    /* ── Progress Steps ── */
+    .progress-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 1.25rem;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 0.82rem;
+      transition: all 0.3s;
+    }
+
+    .progress-step.done {
+      border-color: rgba(52, 211, 153, 0.2);
+      background: rgba(52, 211, 153, 0.05);
+      color: var(--accent-green);
+    }
+
+    .progress-step.active {
+      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.07);
+      color: var(--accent);
+    }
+
+    .progress-step.pending {
+      border-color: transparent;
+      color: var(--text-muted);
+    }
+
+    .step-icon {
+      font-size: 0.85rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state .emoji {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    /* ── Copy Button ── */
+    .copy-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+
+    .copy-btn:hover {
+      color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer span {
+      color: var(--accent);
+    }
+
+    /* ── Dim overlay for loading ── */
+    .dim {
+      opacity: 0.5;
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ─── Constants ─────────────────────────────────────────────────────────────────
+    const API_BASE = 'http://localhost:8080/api';
+
+    const INSTANCE_TYPES = ['t2.nano', 't2.micro', 't2.small', 't2.medium', 't2.large', 't3.nano', 't3.micro', 't3.small', 't3.medium', 't3.large'];
+    
+    const GCP_MACHINE_TYPES = ['e2-micro', 'e2-small', 'e2-medium', 'e2-standard-2', 'e2-standard-4'];
+    
+    const AI_INSTANCE_TYPES = {
+      aws: ['p3.2xlarge', 'g4dn.xlarge', 'g5.xlarge'],
+      gcp: ['n1-standard-4-t4', 'a2-highgpu-1g']
+    };
+    
+    const AWS_REGIONS = [
+      { value: 'us-east-1', label: 'US East (N. Virginia)' },
+      { value: 'us-east-2', label: 'US East (Ohio)' },
+      { value: 'us-west-1', label: 'US West (N. California)' },
+      { value: 'us-west-2', label: 'US West (Oregon)' },
+      { value: 'ap-south-1', label: 'Asia Pacific (Mumbai)' },
+      { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+      { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' },
+      { value: 'eu-west-1', label: 'Europe (Ireland)' },
+      { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
+      { value: 'ca-central-1', label: 'Canada (Central)' },
+    ];
+
+    const GCP_REGIONS = [
+      { value: 'us-central1', label: 'US Central (Iowa)' },
+      { value: 'us-east1', label: 'US East (S. Carolina)' },
+      { value: 'us-west1', label: 'US West (Oregon)' },
+      { value: 'europe-west1', label: 'Europe (Belgium)' },
+      { value: 'asia-east1', label: 'Asia (Taiwan)' }
+    ];
+
+    // Ubuntu 22.04 LTS (Jammy) AMIs per region — updated Mar 2025
+    const REGION_AMIS = {
+      'us-east-1': 'ami-0c02fb55956c7d316',
+      'us-east-2': 'ami-097a2df4ac947655f',
+      'us-west-1': 'ami-0d9858aa3c6322f73',
+      'us-west-2': 'ami-0892d3c7ee96c0bf7',
+      'ap-south-1': 'ami-0f58b397bc5c1f2e8',
+      'ap-southeast-1': 'ami-0df7a207adb9788c7',
+      'ap-northeast-1': 'ami-01bef798938b7443a',
+      'eu-west-1': 'ami-0d2a4a5d69e46ea0b',
+      'eu-central-1': 'ami-0faab6bdbac9486fb',
+      'ca-central-1': 'ami-0843f7c45354d48b5',
+    };
+
+    const PROVISION_STEPS = [
+      { id: 'config', label: 'Generating Terraform configuration files' },
+      { id: 'init', label: 'Initializing Terraform (downloading AWS provider)' },
+      { id: 'plan', label: 'Running terraform plan' },
+      { id: 'apply', label: 'Applying plan (provisioning AWS resources)' },
+      { id: 'output', label: 'Extracting resource metadata' },
+      { id: 'done', label: 'Instance running ✓' },
+    ];
+
+    function getStepIndex(message) {
+      if (!message) return -1;
+      if (message.includes('Generating')) return 0;
+      if (message.includes('Initializing')) return 1;
+      if (message.includes('plan')) return 2;
+      if (message.includes('Applying') || message.includes('provisioning')) return 3;
+      if (message.includes('Extracting') || message.includes('metadata')) return 4;
+      if (message.includes('successfully')) return 5;
+      return -1;
+    }
+
+    // ─── API Helpers ───────────────────────────────────────────────────────────────
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
+      return data;
+    }
+
+    // ─── StatusBadge ──────────────────────────────────────────────────────────────
+    function StatusBadge({ status }) {
+      const s = (status || '').toLowerCase();
+      const cls = {
+        pending: 'badge-pending', in_progress: 'badge-in_progress',
+        success: 'badge-success', failed: 'badge-failed',
+        destroying: 'badge-destroying', destroyed: 'badge-destroyed',
+      }[s] || 'badge-pending';
+      const icon = {
+        pending: '⏳', in_progress: '⚙', success: '✓', failed: '✗',
+        destroying: '🗑', destroyed: '✗',
+      }[s] || '?';
+      return <span className={`status-badge ${cls}`}>{icon} {status}</span>;
+    }
+
+    // ─── CopyText ─────────────────────────────────────────────────────────────────
+    function CopyText({ value }) {
+      const [copied, setCopied] = useState(false);
+      function copy() {
+        navigator.clipboard.writeText(value).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        });
+      }
+      return (
+        <span className="copy-row">
+          <span className="mono">{value}</span>
+          <button className="copy-btn" onClick={copy} title="Copy">{copied ? '✓' : '⧉'}</button>
+        </span>
+      );
+    }
+
+    // ─── ProvisionForm ────────────────────────────────────────────────────────────
+    function ProvisionForm({ onProvisioned }) {
+      const [form, setForm] = useState({
+        provider: 'AWS',
+        resourceType: 'COMPUTE',
+        instanceType: 't2.micro',
+        region: 'us-east-1',
+        amiId: REGION_AMIS['us-east-1'],
+        instanceName: '',
+        keyPairName: '',
+        storageSizeGb: '10',
+        aiFramework: 'TENSORFLOW'
+      });
+      const [pricing, setPricing] = useState(null);
+      const [loadingPricing, setLoadingPricing] = useState(false);
+      const [errors, setErrors] = useState({});
+      const [loading, setLoading] = useState(false);
+      const [alert, setAlert] = useState(null);
+
+      useEffect(() => {
+          fetchPricing(form.resourceType);
+      }, [form.resourceType]);
+
+      async function fetchPricing(type) {
+          setLoadingPricing(true);
+          try {
+              const res = await fetch(`${API_BASE}/pricing/compare?resourceType=${type}`);
+              const data = await res.json();
+              setPricing(data);
+          } catch(e) {
+              console.error(e);
+              setPricing(null);
+          } finally {
+              setLoadingPricing(false);
+          }
+      }
+
+      function set(field, value) {
+        if (field === 'region' && form.provider === 'AWS' && form.resourceType === 'COMPUTE') {
+          // Auto-fill AMI when region changes
+          setForm(p => ({ ...p, region: value, amiId: REGION_AMIS[value] || '' }));
+          setErrors(p => ({ ...p, amiId: null }));
+        } else if (field === 'provider') {
+            let defaultRegion = value === 'AWS' ? 'us-east-1' : 'us-central1';
+            let defaultType = value === 'AWS' ? 't2.micro' : 'e2-micro';
+            setForm(p => ({ ...p, provider: value, region: defaultRegion, instanceType: defaultType, amiId: value === 'AWS' ? REGION_AMIS[defaultRegion] : 'debian-cloud/debian-11' }));
+        } else {
+          setForm(p => ({ ...p, [field]: value }));
+          setErrors(p => ({ ...p, [field]: null }));
+        }
+      }
+
+      function validate() {
+        const e = {};
+        if (!form.instanceName.trim() || form.instanceName.trim().length < 3)
+          e.instanceName = 'Must be at least 3 characters';
+        if (form.resourceType === 'COMPUTE' && form.provider === 'AWS') {
+            if (!form.amiId.trim() || !/^ami-[a-f0-9]{8,17}$/.test(form.amiId.trim()))
+              e.amiId = 'Must match pattern ami-[hex] (e.g. ami-0c02fb55956c7d316)';
+        }
+        return e;
+      }
+
+      async function submit(e) {
+        e.preventDefault();
+        const e2 = validate();
+        if (Object.keys(e2).length) { setErrors(e2); return; }
+        setLoading(true); setAlert(null);
+        try {
+          const body = { ...form };
+          if (!body.keyPairName) delete body.keyPairName;
+          if (body.resourceType !== 'STORAGE') delete body.storageSizeGb;
+          if (body.resourceType !== 'AI_WORKSPACE') delete body.aiFramework;
+          if (body.resourceType !== 'COMPUTE' && body.resourceType !== 'AI_WORKSPACE') {
+              delete body.instanceType;
+              delete body.amiId;
+          }
+
+          const res = await apiFetch('/infrastructure/provision', {
+            method: 'POST', body: JSON.stringify(body),
+          });
+          setAlert({ type: 'success', text: `✓ Request submitted! Request ID: ${res.requestId}` });
+          onProvisioned(res);
+        } catch (err) {
+          setAlert({ type: 'error', text: `✗ ${err.message}` });
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      return (
+        <form onSubmit={submit}>
+          {alert && (
+            <div className={`alert alert-${alert.type}`}>{alert.text}</div>
+          )}
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="provider">Cloud Provider</label>
+              <select id="provider" className="form-control"
+                value={form.provider} onChange={e => set('provider', e.target.value)}>
+                <option value="AWS">AWS</option>
+                <option value="GCP">GCP</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="resourceType">Resource Type</label>
+              <select id="resourceType" className="form-control"
+                value={form.resourceType} onChange={e => set('resourceType', e.target.value)}>
+                <option value="COMPUTE">Compute</option>
+                <option value="STORAGE">Storage</option>
+                <option value="AI_WORKSPACE">AI Workspace</option>
+              </select>
+            </div>
+
+            {form.resourceType === 'COMPUTE' && (
+              <div className="form-group">
+                <label htmlFor="instanceType">Instance Type</label>
+                <select id="instanceType" className="form-control"
+                  value={form.instanceType} onChange={e => set('instanceType', e.target.value)}>
+                  {form.provider === 'AWS' ? INSTANCE_TYPES.map(t => <option key={t}>{t}</option>) : GCP_MACHINE_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+
+            {form.resourceType === 'AI_WORKSPACE' && (
+              <div className="form-group">
+                <label htmlFor="instanceType">AI Instance Type</label>
+                <select id="instanceType" className="form-control"
+                  value={form.instanceType} onChange={e => set('instanceType', e.target.value)}>
+                  {form.provider === 'AWS' ? AI_INSTANCE_TYPES.aws.map(t => <option key={t}>{t}</option>) : AI_INSTANCE_TYPES.gcp.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="region">Region</label>
+              <select id="region" className="form-control"
+                value={form.region} onChange={e => set('region', e.target.value)}>
+                {form.provider === 'AWS' ? AWS_REGIONS.map(r => (
+                  <option key={r.value} value={r.value}>{r.label} ({r.value})</option>
+                )) : GCP_REGIONS.map(r => (
+                  <option key={r.value} value={r.value}>{r.label} ({r.value})</option>
+                ))}
+              </select>
+            </div>
+
+            {form.resourceType !== 'STORAGE' && (
+              <div className={`form-group${errors.amiId ? ' full' : ''}`}>
+                <label htmlFor="amiId">{form.provider === 'AWS' ? 'AMI ID *' : 'Image Name *'}</label>
+                <input id="amiId" className={`form-control${errors.amiId ? ' error' : ''}`}
+                  placeholder={form.provider === 'AWS' ? "ami-0c02fb55956c7d316" : "ubuntu-os-cloud/ubuntu-2204-lts"}
+                  value={form.amiId} onChange={e => set('amiId', e.target.value)} />
+                {errors.amiId && <span className="error-text">{errors.amiId}</span>}
+                {!errors.amiId && form.provider === 'AWS' && REGION_AMIS[form.region] && (
+                  <span className="error-text" style={{ color: 'var(--text-muted)' }}>
+                    ✦ Ubuntu 22.04 LTS for <b style={{ color: 'var(--accent)' }}>{form.region}</b>: <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>{REGION_AMIS[form.region]}</code>
+                    {form.amiId !== REGION_AMIS[form.region] &&
+                      <button type="button" onClick={() => set('amiId', REGION_AMIS[form.region])}
+                        style={{ marginLeft: 8, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}>
+                        Use
+                      </button>}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {(form.resourceType === 'STORAGE' || form.resourceType === 'AI_WORKSPACE') && (
+              <div className="form-group">
+                <label htmlFor="storageSizeGb">Storage Size (GB)</label>
+                <input type="number" id="storageSizeGb" className="form-control"
+                  value={form.storageSizeGb} onChange={e => set('storageSizeGb', e.target.value)} />
+              </div>
+            )}
+
+            {pricing && (
+              <div className="form-group full" style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>Pricing Compare ({form.resourceType})</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>AWS Rate ({pricing.awsDetails}):</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>${pricing.awsPricePerHour.toFixed(3)}/hr</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>GCP Rate ({pricing.gcpDetails}):</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>${pricing.gcpPricePerHour.toFixed(3)}/hr</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Recommendation:</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{pricing.recommendation}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className={`form-group${errors.instanceName ? ' full' : ''}`}>
+              <label htmlFor="instanceName">Instance Name *</label>
+              <input id="instanceName" className={`form-control${errors.instanceName ? ' error' : ''}`}
+                placeholder="my-aura-server"
+                value={form.instanceName} onChange={e => set('instanceName', e.target.value)} />
+              {errors.instanceName && <span className="error-text">{errors.instanceName}</span>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="keyPairName">Key Pair Name <span className="text-muted">(optional)</span></label>
+              <input id="keyPairName" className="form-control"
+                placeholder="my-aws-keypair"
+                value={form.keyPairName} onChange={e => set('keyPairName', e.target.value)} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1.25rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button type="submit" id="btn-provision" className="btn btn-primary" disabled={loading}>
+              {loading ? <><span className="spinner" /> Submitting...</> : '⚡ Provision Instance'}
+            </button>
+            <span className="text-sm text-muted">Returns instantly — provisioning runs in the background</span>
+          </div>
+        </form>
+      );
+    }
+
+    // ─── StatusTracker ────────────────────────────────────────────────────────────
+    function StatusTracker({ requestId, onStatusChange }) {
+      const [data, setData] = useState(null);
+      const [error, setError] = useState(null);
+      const intervalRef = useRef(null);
+
+      async function fetchStatus(id) {
+        try {
+          const res = await apiFetch(`/infrastructure/status/${id}`);
+          setData(res); setError(null);
+          if (onStatusChange) onStatusChange(res);
+          if (res.status === 'SUCCESS' || res.status === 'FAILED' || res.status === 'DESTROYED') {
+            clearInterval(intervalRef.current);
+          }
+        } catch (e) {
+          setError(e.message);
+          clearInterval(intervalRef.current);
+        }
+      }
+
+      useEffect(() => {
+        if (!requestId) return;
+        fetchStatus(requestId);
+        intervalRef.current = setInterval(() => fetchStatus(requestId), 5000);
+        return () => clearInterval(intervalRef.current);
+      }, [requestId]);
+
+      if (error) return <div className="alert alert-error">⚠ {error}</div>;
+      if (!data) return (
+        <div className="status-panel">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)' }}>
+            <span className="spinner" />
+            <span className="text-sm">Loading status...</span>
+          </div>
+        </div>
+      );
+
+      const isLive = data.status === 'IN_PROGRESS' || data.status === 'PENDING' || data.status === 'DESTROYING';
+      const stepIndex = getStepIndex(data.message);
+
+      return (
+        <div className="status-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                {isLive && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <span className="spinner" style={{ width: 12, height: 12 }} />
+                  Live tracking every 5s
+                </span>}
+              </div>
+              <StatusBadge status={data.status} />
+            </div>
+            <div className="mono text-muted text-sm">{data.requestId}</div>
+          </div>
+
+          <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{data.message}</p>
+
+          {(data.status === 'IN_PROGRESS' || data.status === 'PENDING') && (
+            <div className="progress-steps">
+              {PROVISION_STEPS.map((step, i) => {
+                const state = i < stepIndex ? 'done' : i === stepIndex ? 'active' : 'pending';
+                return (
+                  <div key={step.id} className={`progress-step ${state}`}>
+                    <span className="step-icon">{state === 'done' ? '✓' : state === 'active' ? '⟳' : '○'}</span>
+                    {step.label}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {data.status === 'SUCCESS' && (
+            <div className="status-meta">
+              {data.instanceId && <div className="status-meta-item">
+                <label>Instance ID</label>
+                <CopyText value={data.instanceId} />
+              </div>}
+              {data.publicIp && <div className="status-meta-item">
+                <label>Public IP</label>
+                <CopyText value={data.publicIp} />
+              </div>}
+              {data.region && <div className="status-meta-item">
+                <label>Region</label>
+                <div className="val">{data.region}</div>
+              </div>}
+              {data.instanceType && <div className="status-meta-item">
+                <label>Instance Type</label>
+                <div className="val">{data.instanceType}</div>
+              </div>}
+              {data.availabilityZone && <div className="status-meta-item">
+                <label>AZ</label>
+                <div className="val">{data.availabilityZone}</div>
+              </div>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── ProvisionTab ─────────────────────────────────────────────────────────────
+    function ProvisionTab() {
+      const [trackingId, setTrackingId] = useState(null);
+      const [manualId, setManualId] = useState('');
+
+      function handleProvisioned(res) {
+        setTrackingId(res.requestId);
+      }
+
+      return (
+        <div className="grid-2">
+          <div>
+            <div className="card">
+              <div className="card-title"><span className="icon">⚡</span> New Provision Request</div>
+              <ProvisionForm onProvisioned={handleProvisioned} />
+            </div>
+
+            <div className="card" style={{ marginTop: '1.5rem' }}>
+              <div className="card-title"><span className="icon">🔍</span> Track by Request ID</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input id="manual-request-id" className="form-control" style={{ flex: 1 }}
+                  placeholder="Paste a Request ID..."
+                  value={manualId} onChange={e => setManualId(e.target.value)} />
+                <button id="btn-track" className="btn btn-ghost"
+                  onClick={() => setTrackingId(manualId.trim())}
+                  disabled={!manualId.trim()}>
+                  Track
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="card">
+              <div className="card-title"><span className="icon">📡</span> Live Status</div>
+              {trackingId
+                ? <StatusTracker key={trackingId} requestId={trackingId} />
+                : <div className="empty-state">
+                  <div className="emoji">📡</div>
+                  <p>Submit a provision request or enter a Request ID on the left to track live status.</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── HistoryTab ───────────────────────────────────────────────────────────────
+    function HistoryTab() {
+      const [requests, setRequests] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [destroying, setDestroying] = useState({});
+      const [trackingId, setTrackingId] = useState(null);
+      const intervalRef = useRef(null);
+
+      async function loadHistory() {
+        try {
+          const data = await apiFetch('/infrastructure/history');
+          setRequests(data);
+        } catch (e) {
+          // silent
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      useEffect(() => {
+        loadHistory();
+        intervalRef.current = setInterval(loadHistory, 8000);
+        return () => clearInterval(intervalRef.current);
+      }, []);
+
+      async function handleDestroy(requestId) {
+        setDestroying(p => ({ ...p, [requestId]: true }));
+        try {
+          await apiFetch(`/infrastructure/destroy/${requestId}`, { method: 'DELETE' });
+          await loadHistory();
+          setTrackingId(requestId);
+        } catch (e) {
+          alert(e.message);
+        } finally {
+          setDestroying(p => ({ ...p, [requestId]: false }));
+        }
+      }
+
+      if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+          <span className="spinner" style={{ width: 32, height: 32 }} />
+        </div>
+      );
+
+      return (
+        <div>
+          {trackingId && (
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <div className="card-title"><span className="icon">📡</span> Tracking Destruction</div>
+              <StatusTracker key={trackingId} requestId={trackingId} />
+            </div>
+          )}
+
+          <div className="card">
+            <div className="card-title" style={{ justifyContent: 'space-between' }}>
+              <span><span className="icon">📋</span> Provisioning History</span>
+              <button className="btn btn-ghost btn-sm" onClick={loadHistory}>↺ Refresh</button>
+            </div>
+
+            {requests.length === 0 ? (
+              <div className="empty-state">
+                <div className="emoji">🌥️</div>
+                <p>No provisioning requests yet.<br />Submit one from the <b>Provision</b> tab.</p>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Instance Name</th>
+                      <th>Type</th>
+                      <th>Region</th>
+                      <th>Instance ID</th>
+                      <th>Public IP</th>
+                      <th>Updated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.map(r => (
+                      <tr key={r.requestId}>
+                        <td><StatusBadge status={r.status} /></td>
+                        <td className="fw-600">{r.instanceName || '—'}</td>
+                        <td><span className="mono">{r.instanceType || '—'}</span></td>
+                        <td className="mono text-sm">{r.region || '—'}</td>
+                        <td className="mono text-sm">{r.instanceId
+                          ? <CopyText value={r.instanceId} />
+                          : <span className="text-muted">—</span>}
+                        </td>
+                        <td className="mono text-sm">{r.publicIp
+                          ? <CopyText value={r.publicIp} />
+                          : <span className="text-muted">—</span>}
+                        </td>
+                        <td className="text-sm text-muted">
+                          {r.updatedAt ? r.updatedAt.replace('T', ' ') : '—'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button className="btn btn-ghost btn-sm"
+                              onClick={() => setTrackingId(r.requestId)}>
+                              Track
+                            </button>
+                            {(r.status === 'SUCCESS' || r.status === 'IN_PROGRESS') && (
+                              <button className="btn btn-danger btn-sm"
+                                disabled={!!destroying[r.requestId]}
+                                onClick={() => handleDestroy(r.requestId)}>
+                                {destroying[r.requestId]
+                                  ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Destroying</>
+                                  : '🗑 Destroy'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── HealthPanel ──────────────────────────────────────────────────────────────
+    function HealthPanel({ health }) {
+      if (!health) return null;
+      return (
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div className="card" style={{ minWidth: 220 }}>
+            <div className="text-muted text-sm" style={{ marginBottom: 8 }}>Terraform CLI</div>
+            {health.terraformAvailable
+              ? <><div className="accent-green fw-600">✓ Available</div>
+                <div className="mono text-muted" style={{ fontSize: '0.75rem', marginTop: 4 }}>{health.terraformVersion}</div></>
+              : <div className="text-red fw-600">✗ Not found on PATH</div>
+            }
+          </div>
+          <div className="card" style={{ minWidth: 220 }}>
+            <div className="text-muted text-sm" style={{ marginBottom: 8 }}>Workspaces Directory</div>
+            <div className="mono text-sm">{health.workspacesDir}</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── CurlDemo ─────────────────────────────────────────────────────────────────
+    function CurlDemo() {
+      const [copied, setCopied] = useState('');
+      const examples = [
+        {
+          label: 'Provision an EC2 instance',
+          cmd: `curl -X POST http://localhost:8080/api/infrastructure/provision \\
+  -H "Content-Type: application/json" \\
+  -d '{"instanceType":"t2.micro","region":"us-east-1","amiId":"ami-0c02fb55956c7d316","instanceName":"demo-server"}'`,
+        },
+        {
+          label: 'Query provisioning status',
+          cmd: `curl http://localhost:8080/api/infrastructure/status/{requestId}`,
+        },
+        {
+          label: 'Destroy infrastructure',
+          cmd: `curl -X DELETE http://localhost:8080/api/infrastructure/destroy/{requestId}`,
+        },
+        {
+          label: 'List all requests',
+          cmd: `curl http://localhost:8080/api/infrastructure/history`,
+        },
+        {
+          label: 'Health check',
+          cmd: `curl http://localhost:8080/api/health`,
+        },
+      ];
+
+      return (
+        <div className="card">
+          <div className="card-title"><span className="icon">📟</span> API Quick Reference (cURL)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {examples.map((ex, i) => (
+              <div key={i}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '5px' }}>{ex.label}</div>
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', position: 'relative' }}>
+                  <pre style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)', overflowX: 'auto', margin: 0 }}>{ex.cmd}</pre>
+                  <button className="copy-btn" style={{ position: 'absolute', top: 8, right: 8 }}
+                    onClick={() => { navigator.clipboard.writeText(ex.cmd); setCopied(i); setTimeout(() => setCopied(''), 1500); }}>
+                    {copied === i ? '✓' : '⧉'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── App (Root) ───────────────────────────────────────────────────────────────
+    function App() {
+      const [tab, setTab] = useState('provision');
+      const [health, setHealth] = useState(null);
+      const [healthStatus, setHealthStatus] = useState('check');
+      const [darkMode, setDarkMode] = useState(() => {
+        const saved = localStorage.getItem('aura-theme');
+        return saved ? saved === 'dark' : true; // default dark
+      });
+
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        localStorage.setItem('aura-theme', darkMode ? 'dark' : 'light');
+      }, [darkMode]);
+
+      useEffect(() => {
+        apiFetch('/health')
+          .then(h => { setHealth(h); setHealthStatus(h.status === 'UP' ? 'up' : 'down'); })
+          .catch(() => setHealthStatus('down'));
+      }, []);
+
+      return (
+        <>
+          {/* ── Topbar ── */}
+          <header className="topbar">
+            <div className="logo">
+              <div className="logo-icon">A</div>
+              <div>
+                <div className="logo-text">AURA</div>
+                <div className="logo-sub">Autonomous Universal Resource Assembler</div>
+              </div>
+            </div>
+            <div className="topbar-right">
+              <div className={`health-badge ${healthStatus}`}>
+                <span className="health-dot" />
+                {healthStatus === 'check' ? 'Checking...' : healthStatus === 'up' ? 'Backend UP' : 'Backend DOWN'}
+              </div>
+              <button
+                id="theme-toggle"
+                className="theme-toggle"
+                onClick={() => setDarkMode(d => !d)}
+                title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
+            </div>
+          </header>
+
+          {/* ── Main ── */}
+          <main className="main">
+            {/* Tabs */}
+            <div className="tabs">
+              {[
+                { key: 'provision', label: '⚡ Provision' },
+                { key: 'history', label: '📋 History' },
+                { key: 'docs', label: '📟 API Docs' },
+              ].map(t => (
+                <button key={t.key} id={`tab-${t.key}`}
+                  className={`tab-btn${tab === t.key ? ' active' : ''}`}
+                  onClick={() => setTab(t.key)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Health info inline */}
+            {health && tab === 'provision' && <HealthPanel health={health} />}
+            {health && tab === 'provision' && <div style={{ height: '1.5rem' }} />}
+
+            {/* Tab Content */}
+            {tab === 'provision' && <ProvisionTab />}
+            {tab === 'history' && <HistoryTab />}
+            {tab === 'docs' && <CurlDemo />}
+          </main>
+
+          {/* ── Footer ── */}
+          <footer>
+            <span>AURA</span> — Autonomous Universal Resource Assembler · Built with Spring Boot + Terraform + AWS
+          </footer>
+        </>
+      );
+    }
+
+    // ─── Mount ────────────────────────────────────────────────────────────────────
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
+
